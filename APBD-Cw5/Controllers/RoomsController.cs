@@ -10,9 +10,23 @@ namespace APBD_Cw5.Controllers
     {
         // GET /api/rooms
         [HttpGet]
-        public IActionResult GetRooms()
+        public IActionResult GetRooms(
+            [FromQuery] int? minCapacity,
+            [FromQuery] bool? hasProjector,
+            [FromQuery] bool? activeOnly)
         {
-            return Ok(AppData.Rooms);
+            var query = AppData.Rooms.AsQueryable();
+
+            if (minCapacity.HasValue)
+                query = query.Where(r => r.Capacity >= minCapacity.Value);
+
+            if (hasProjector.HasValue)
+                query = query.Where(r => r.HasProjector == hasProjector.Value);
+
+            if (activeOnly == true)
+                query = query.Where(r => r.IsActive);
+
+            return Ok(query.ToList());
         }
 
         // GET /api/rooms/{id}
@@ -32,31 +46,10 @@ namespace APBD_Cw5.Controllers
         public IActionResult GetRoomsByBuilding(string buildingCode)
         {
             var rooms = AppData.Rooms
-                .Where(r => r.BuildingCode.ToLower() == buildingCode.ToLower())
+                .Where(r => r.BuildingCode.Equals(buildingCode, StringComparison.OrdinalIgnoreCase))
                 .ToList();
 
             return Ok(rooms);
-        }
-
-        // GET /api/rooms?minCapacity=20&hasProjector=true&activeOnly=true
-        [HttpGet]
-        public IActionResult GetFilteredRooms(
-            [FromQuery] int? minCapacity,
-            [FromQuery] bool? hasProjector,
-            [FromQuery] bool? activeOnly)
-        {
-            var query = AppData.Rooms.AsQueryable();
-
-            if (minCapacity.HasValue)
-                query = query.Where(r => r.Capacity >= minCapacity.Value);
-
-            if (hasProjector.HasValue)
-                query = query.Where(r => r.HasProjector == hasProjector.Value);
-
-            if (activeOnly == true)
-                query = query.Where(r => r.IsActive);
-
-            return Ok(query.ToList());
         }
 
         // POST /api/rooms
@@ -66,7 +59,7 @@ namespace APBD_Cw5.Controllers
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
-            room.Id = AppData.Rooms.Max(r => r.Id) + 1;
+            room.Id = AppData.Rooms.Any() ? AppData.Rooms.Max(r => r.Id) + 1 : 1;
             AppData.Rooms.Add(room);
 
             return CreatedAtAction(nameof(GetRoom), new { id = room.Id }, room);
@@ -103,10 +96,10 @@ namespace APBD_Cw5.Controllers
             if (room == null)
                 return NotFound();
 
-            var hasReservations = AppData.Reservations.Any(r => r.RoomId == id);
+            var hasRelatedReservations = AppData.Reservations.Any(r => r.RoomId == id);
 
-            if (hasReservations)
-                return Conflict("Room has reservations and cannot be deleted");
+            if (hasRelatedReservations)
+                return Conflict("Cannot delete room with related reservations.");
 
             AppData.Rooms.Remove(room);
 
