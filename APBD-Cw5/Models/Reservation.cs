@@ -11,10 +11,10 @@ namespace APBD_Cw5.Models
         public int RoomId { get; set; }
 
         [Required]
-        public string OrganizerName { get; set; }
+        public string OrganizerName { get; set; } = string.Empty;
 
         [Required]
-        public string Topic { get; set; }
+        public string Topic { get; set; } = string.Empty;
 
         public DateTime Date { get; set; }
 
@@ -22,7 +22,7 @@ namespace APBD_Cw5.Models
         public TimeSpan EndTime { get; set; }
 
         [Required]
-        public string Status { get; set; }
+        public string Status { get; set; } = string.Empty;
 
         public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
         {
